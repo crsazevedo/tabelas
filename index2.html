@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Tabela de Verdade Interativa</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    .controls {
+      margin-bottom: 20px;
+    }
+
+    button {
+      margin: 4px;
+      padding: 10px 12px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    td, th {
+      width: 40px;
+      height: 40px;
+      border: 1px solid #ccc;
+      text-align: center;
+      vertical-align: middle;
+      cursor: pointer;
+    }
+
+    .add-column, .remove-column {
+      font-weight: bold;
+      background-color: #e0e0e0;
+    }
+
+    .keyboard-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .keyboard-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
+    }
+
+    .group-label {
+      font-weight: bold;
+      font-size: 15px;
+      color: #333;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Escolha o número de letras proposicionais:</h2>
+  <div class="controls">
+    <button onclick="generateTable(2)">Tabela com 2 letras (P, Q)</button>
+    <button onclick="generateTable(3)">Tabela com 3 letras (P, Q, R)</button>
+    <button onclick="generateTable(4)">Tabela com 4 letras (P, Q, R, S)</button>
+  </div>
+
+  <h2>Teclado Lógico</h2>
+
+  <!-- Teclado Horizontal -->
+  <div class="keyboard-container">
+
+    <!-- Grupo: Símbolos Lógicos -->
+    <div class="keyboard-group">
+      <div class="group-label">Símbolos Lógicos</div>
+      <div class="button-row">
+        <button onclick="insertSymbol('¬')">¬</button>
+        <button onclick="insertSymbol('∧')">∧</button>
+        <button onclick="insertSymbol('∨')">∨</button>
+        <button onclick="insertSymbol('⊻')">⊻</button>
+        <button onclick="insertSymbol('→')">→</button>
+        <button onclick="insertSymbol('↔')">↔</button>
+        <button onclick="insertSymbol('∴')">∴</button>
+        <button onclick="insertSymbol('(')">(</button>
+        <button onclick="insertSymbol(')')">)</button>
+      </div>
+    </div>
+
+    <!-- Grupo: Letras Proposicionais -->
+    <div class="keyboard-group">
+      <div class="group-label">Letras Proposicionais</div>
+      <div class="button-row">
+        <button onclick="insertSymbol('P')">P</button>
+        <button onclick="insertSymbol('Q')">Q</button>
+        <button onclick="insertSymbol('R')">R</button>
+        <button onclick="insertSymbol('S')">S</button>
+      </div>
+    </div>
+
+    <!-- Grupo: Valores de Verdade -->
+    <div class="keyboard-group">
+      <div class="group-label">Valores de Verdade</div>
+      <div class="button-row">
+        <button onclick="insertSymbol('V')">V</button>
+        <button onclick="insertSymbol('F')">F</button>
+      </div>
+    </div>
+
+    <!-- Grupo: Ações -->
+    <div class="keyboard-group">
+      <div class="group-label">Ações</div>
+      <div class="button-row">
+        <button id="undoBtn">⌫ Apagar</button>
+        <button onclick="addColumn()" class="add-column">+ Adicionar Coluna</button>
+        <button onclick="removeColumn()" class="remove-column">− Remover Coluna</button>
+      </div>
+    </div>
+
+  </div>
+
+  <table id="truthTable">
+    <!-- Conteúdo gerado dinamicamente -->
+  </table>
+
+  <script>
+    let selectedCell = null;
+    const editHistory = [];
+
+    function selectCell(cell) {
+      selectedCell = cell;
+    }
+
+    function insertSymbol(symbol) {
+      if (selectedCell) {
+        const rowIndex = selectedCell.parentNode.rowIndex;
+        const cellIndex = selectedCell.cellIndex;
+
+        editHistory.push({
+          row: rowIndex,
+          cell: cellIndex,
+          oldValue: selectedCell.innerText
+        });
+
+        selectedCell.innerText = symbol;
+      }
+    }
+
+    function clearCell() {
+      if (selectedCell) {
+        selectedCell.innerText = "";
+      }
+    }
+
+    function addColumn() {
+      const table = document.getElementById("truthTable");
+      const rows = table.rows;
+
+      for (let i = 0; i < rows.length; i++) {
+        const newCell = rows[i].insertCell();
+        newCell.setAttribute("onclick", "selectCell(this)");
+        if (i === 0) {
+          newCell.innerHTML = "&nbsp;";
+        } else {
+          newCell.innerHTML = "";
+        }
+      }
+    }
+
+    function removeColumn() {
+      const table = document.getElementById("truthTable");
+
+      if (table.rows.length === 0) return;
+
+      const firstRow = table.rows[0];
+      if (firstRow.cells.length > (document.querySelectorAll(".keyboard-group .button-row button:checked")?.length || 2)) {
+        for (let i = 0; i < table.rows.length; i++) {
+          const row = table.rows[i];
+          if (row.cells.length > 0) {
+            row.deleteCell(-1);
+          }
+        }
+      }
+    }
+
+    function generateTable(numVars) {
+      const table = document.getElementById("truthTable");
+      table.innerHTML = "";
+
+      const numRows = Math.pow(2, numVars);
+      const headers = [];
+
+      if (numVars === 2) {
+        headers.push("P", "Q");
+      } else if (numVars === 3) {
+        headers.push("P", "Q", "R");
+      } else if (numVars === 4) {
+        headers.push("P", "Q", "R", "S");
+      }
+
+      // Linha de cabeçalho
+      const headerRow = table.insertRow();
+      for (const h of headers) {
+        const cell = headerRow.insertCell();
+        cell.textContent = h;
+      }
+
+      // Linhas com valores de verdade
+      for (let i = 0; i < numRows; i++) {
+        const row = table.insertRow();
+
+        for (let j = 0; j < numVars; j++) {
+          const cell = row.insertCell();
+          cell.setAttribute("onclick", "selectCell(this)");
+
+          const value = (i >> (numVars - 1 - j)) & 1;
+          cell.textContent = value === 1 ? "V" : "F";
+        }
+      }
+
+      // Adiciona uma coluna inicial para preencher resultados
+      addColumn();
+    }
+
+    // Função para desfazer a última alteração
+    function undoLastEdit() {
+      if (editHistory.length === 0) {
+        alert("Não há mais alterações para desfazer.");
+        return;
+      }
+
+      const lastEdit = editHistory.pop();
+      const table = document.getElementById("truthTable");
+      const cell = table.rows[lastEdit.row].cells[lastEdit.cell];
+
+      if (cell) {
+        cell.innerText = lastEdit.oldValue;
+      }
+    }
+
+    // Associa a função ao botão "Apagar"
+    document.getElementById("undoBtn").addEventListener("click", undoLastEdit);
+  </script>
+
+</body>
+</html>
